@@ -1,0 +1,16 @@
+[package]
+name = "face-tracking-eyes"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy = "0.14"
+nokhwa = { version = "0.10", features = ["input-native"] }
+rustface = "0.1"
+image = "0.25"
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3

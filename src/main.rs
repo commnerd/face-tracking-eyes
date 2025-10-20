@@ -239,39 +239,21 @@ fn eye_follow_face(
     };
     
     // If no face detected, return to center
-    let (target_x, target_y) = face_pos.unwrap_or((0.0, 0.0));
+    let (norm_x, norm_y) = face_pos.unwrap_or((0.0, 0.0));
     
-    // Scale the movement
-    let horizontal_scale = 2.0;
-    let vertical_scale = 0.5;
-    let vertical_offset = 0.0; // Offset to make eyes look straight ahead when face is centered
+    // Define eye's natural range of motion in radians
+    let max_yaw = std::f32::consts::PI / 4.0;   // ±45 degrees horizontal
+    let max_pitch = std::f32::consts::PI / 6.0; // ±30 degrees vertical
     
-    let target_point = Vec3::new(
-        0.0,  // On the YZ plane (where the eye is)
-        -target_x * horizontal_scale,  // Horizontal (Y axis) - negated to mirror camera view
-        target_y * vertical_scale + vertical_offset,    // Vertical (Z axis) with offset
-    );
+    // Map face position (-1 to 1) directly to eye rotation angles
+    // norm_x/norm_y of -1 = bottom/left of frame, +1 = top/right of frame
+    let target_yaw = -norm_x * max_yaw;      // Negative to mirror camera view
+    let target_pitch = norm_y * max_pitch;   // Direct mapping
     
-    // Rotate eye to look at the target point
+    // Rotate eye to the target angles
     for mut transform in eye_query.iter_mut() {
-        let eye_pos = transform.translation;
-        
-        // Calculate rotation angles
-        let delta_y = target_point.y - eye_pos.y;
-        let delta_z = target_point.z - eye_pos.z;
-        
-        // Rotation around Y axis (looking up/down)
-        let pitch = delta_z.atan2(delta_y.abs().max(0.01));
-        
-        // Rotation around Z axis (looking left/right)
-        let yaw = delta_y.atan2(1.0);
-        
-        // Clamp pitch to limit vertical movement
-        let max_pitch = std::f32::consts::PI / 6.0; // 30 degrees
-        let pitch_clamped = pitch.clamp(-max_pitch, max_pitch);
-        
-        // Create rotation
-        let target_rotation = Quat::from_rotation_y(yaw) * Quat::from_rotation_z(pitch_clamped);
+        // Create rotation from yaw (left/right) and pitch (up/down)
+        let target_rotation = Quat::from_rotation_y(target_yaw) * Quat::from_rotation_z(target_pitch);
         
         // Smooth interpolation for natural movement
         transform.rotation = transform.rotation.slerp(target_rotation, 0.15);
